@@ -707,11 +707,16 @@ class World: # class that contains the voxels and the vasculature
         fig.suptitle('Angiogenesis Metrics at time ' + str(t) + ' hours, number of vessels = ' + str(len(self.vasculature.list_of_vessels)))
         fig.tight_layout()
         # Show the plot
-        plt.savefig('Plots/CurrentPlotting/t' + str(t) +'_Angiogenesis.png')
+        plt.savefig(self.config.plots_path+'/CurrentPlotting/t' + str(t) +'_Angiogenesis.png')
+
+        plt.close()
+        '''
+        Commented by Jesús on 24/07/01 to avoid generating multiple plots
         if self.config.running_on_cluster:
             plt.close()
         else:
             plt.show()
+        '''
 
         #print a table with the values of the metrics for the current distribution, mean, median, std, min, max
         print('Angiogenesis Metrics')

@@ -19,11 +19,8 @@ class Simulator: #this class is used to run the whole simulation
         self.time = 0
         self.config = config
 
-        if not os.path.exists('DataOutput/'):
-            os.makedirs('DataOutput/')
-
-        if not os.path.exists('Plots/'):
-            os.makedirs('Plots/')
+        if not os.path.exists(self.config.plots_path):
+            os.makedirs(self.config.plots_path)
 
     def show_center_of_mass(self, center_of_mass, times): #3D plot of the center of mass
         #3D plot of the center of mass
@@ -43,11 +40,16 @@ class Simulator: #this class is used to run the whole simulation
         ax.set_zlabel('Z')
         ax.set_title('Center of mass path')
         ax.legend()
-        plt.savefig('Plots/Center_of_mass.png', dpi=100)
+        plt.savefig(os.path.join(self.config.plots_path, 'Center_of_mass.png'), dpi=100)
+
+        plt.close()
+        '''
+                Commented by Jesús on 24/07/01 to avoid generating multiple plots
         if self.config.running_on_cluster: #if running on cluster, save plot to file and do not show
             plt.close()
         else:
             plt.show()
+        '''
 
     def show_cell_and_tumor_volume(self, number_tumor_cells, number_necrotic_cells, number_quiescent_cells, number_cycling_cells, tumor_size, tumor_size_free, number_vessels, times): #plot the number of cells and tumor volume
         # plot number of cells evolution
@@ -84,17 +86,23 @@ class Simulator: #this class is used to run the whole simulation
         plt.tight_layout()
 
         # Save the figure
-        fig.savefig('Plots/Combined_plots_tumor_evolution.png', dpi=100)
+        fig.savefig(os.path.join(self.config.plots_path, 'Combined_plots_tumor_evolution.png'), dpi=100)
+
+        plt.close()
+        '''
+        Commented by Jesús on 24/07/01 to avoid generating multiple plots
         if self.config.running_on_cluster:
             plt.close()
         else:
             plt.show()
+        '''
+
     def show(self, world: World, t = 0): #this function is used to show the world at a certain time
         print('Showing world at time : ', t)
         start = current_time()
 
-        if not os.path.exists('Plots/CurrentPlotting/'):
-            os.makedirs('Plots/CurrentPlotting/')
+        if not os.path.exists(os.path.join(self.config.plots_path, 'CurrentPlotting')):
+            os.makedirs(os.path.join(self.config.plots_path, 'CurrentPlotting'))
 
         size = world.half_length
 
@@ -143,11 +151,16 @@ class Simulator: #this class is used to run the whole simulation
             # world.show_tumor_3D(axes, fig, 'number_of_tumor_cells', cmap='viridis', vmin=0, vmax=1000)
             world.vasculature.plot(fig, axes)
             plt.tight_layout()
-            plt.savefig('Plots/CurrentPlotting/t' + str(t) + '_Vasculature.png', dpi=300)
+            plt.savefig(self.config.plots_path + '/CurrentPlotting/t' + str(t) + '_Vasculature.png', dpi=300)
+
+            plt.close()
+            '''
+            Commented by Jesús on 24/07/01 to avoid generating multiple plots
             if self.config.running_on_cluster:
                 plt.close()
             else:
                 plt.show()
+            '''
 
         if self.config.show_slices:
             font = 22
@@ -186,11 +199,16 @@ class Simulator: #this class is used to run the whole simulation
             axes[1, 1].set_title('Number of Necrotic Cells', fontsize=font)
 
             plt.tight_layout()
-            plt.savefig('Plots/CurrentPlotting/t' + str(t) + '_AllPlots.png', dpi=100)
+            plt.savefig(self.config.plots_path+'/CurrentPlotting/t' + str(t) + '_AllPlots.png', dpi=100)
+
+            plt.close()
+            '''
+            Commented by Jesús on 24/07/01 to avoid generating multiple plots
             if self.config.running_on_cluster:
                 plt.close()
             else:
                 plt.show()
+            '''
 
         if self.config.show_o2_vitality_histograms:
             print('Showing histograms')
@@ -209,23 +227,42 @@ class Simulator: #this class is used to run the whole simulation
                 axes[1, i].set_xlabel('Vitality')
                 axes[1, i].set_ylabel('Number of cells')
                 voxel.vitality_histogram(axes[1, i], fig)
+
+            plt.close()
+            '''
+            Commented by Jesús on 24/07/01 to avoid generating multiple plots
             if self.config.running_on_cluster:
                 plt.close()
             else:
                 plt.show()
+            '''
 
         if self.config.show_cell_damage:
             print('Showing cell damage')
             fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10), dpi=100)
             fig.suptitle('Visualization at time t = ' + str(t) + ' hours', fontsize=16)
             world.show_tumor_slice(axes, fig, 'average_cell_damage', levels= np.linspace(0, 1, 10), cmap='cool', extend = 'neither')
+
+            plt.close()
+            '''
+            Commented by Jesús on 24/07/01 to avoid generating multiple plots
             if self.config.running_on_cluster:
                 plt.close()
             else:
                 plt.show()
+            '''
 
         end = current_time()
         print('Time elapsed for showing graphs: ' + str(end - start) + ' seconds')
+
+    def save_results(self, **results):
+        if not os.path.exists(self.config.results_path):
+            os.makedirs(self.config.results_path)
+
+        for name, result in results.items():
+            path = os.path.join(self.config.results_path, f"{name}.npy")
+            np.save(path, result)
+
     def run(self, world: World, video=False): #run the simulation! (the main function)
 
         print(f'Running simulation for {self.finish_time} hours with dt={self.dt}')
@@ -316,15 +353,10 @@ class Simulator: #this class is used to run the whole simulation
             center_of_mass.append(world.center_of_mass)
             times.append(self.time)
 
-            np.save('DataOutput/number_tumor_cells.npy', number_tumor_cells)
-            np.save('DataOutput/number_necrotic_cells.npy', number_necrotic_cells)
-            np.save('DataOutput/number_cycling_cells.npy', number_cycling_cells)
-            np.save('DataOutput/number_quiescent_cells.npy', number_quiescent_cells)
-            np.save('DataOutput/tumor_size.npy', tumor_size)
-            np.save('DataOutput/tumor_size_free.npy', tumor_size_free)
-            np.save('DataOutput/number_vessels.npy', number_vessels)
-            np.save('DataOutput/center_of_mass.npy', center_of_mass)
-            np.save('DataOutput/times.npy', times)
+            self.save_results(number_tumor_cells=number_tumor_cells, number_necrotic_cells=number_necrotic_cells,
+                              number_cycling_cells=number_cycling_cells, number_quiescent_cells=number_quiescent_cells,
+                              tumor_size=tumor_size, tumor_size_free=tumor_size_free, number_vessels=number_vessels,
+                              center_of_mass=center_of_mass, times=times)
 
             if self.time % self.config.save_world_every == 0 and self.time != 0:
                 world.save('t'+str(self.time)+str(self.config.world_file) + str(self.config.seed) + '.pkl')
@@ -358,7 +390,7 @@ class Simulator: #this class is used to run the whole simulation
             plt.ylabel('Time spent doing process (s)')
             plt.yscale('log')
             plt.grid()
-            plt.savefig('Plots/execution_times.png')
+            plt.savefig(os.path.join(self.config.plots_path, 'execution_times.png'))
             plt.close()
 
             self.time += self.dt
@@ -562,11 +594,16 @@ class UpdateCellOxygen(Process):
             ax.axes.set_xlabel('Cell density')
             ax.axes.set_ylabel('Number of capillaries')
             ax.title.set_text('Alpha map')
-            plt.savefig('alpha_map.png', dpi=300)
+            plt.savefig(os.path.join(self.config.plots_path, 'alpha_map.png'), dpi=300)
+
+            plt.close()
+            '''
+            Commented by Jesús on 24/07/01 to avoid generating multiple plots
             if self.config.running_on_cluster:
                 plt.close()
             else:
                 plt.show()
+            '''
 
             fig = plt.figure(dpi=300)
             ax = fig.add_subplot(111, projection='3d')
@@ -575,11 +612,17 @@ class UpdateCellOxygen(Process):
             ax.axes.set_xlabel('Cell density')
             ax.axes.set_ylabel('Number of capillaries')
             ax.title.set_text('Beta map')
-            plt.savefig('beta_map.png', dpi=300)
+            plt.savefig(os.path.join(self.config.plots_path, 'beta_map.png'), dpi=300)
+
+            plt.close()
+            '''
+            Commented by Jesús on 24/07/01 to avoid generating multiple plots
             if self.config.running_on_cluster:
                 plt.close()
             else:
                 plt.show()
+            '''
+
     @Process.timeit
     def __call__(self, voxel: Voxel):
 
@@ -716,10 +759,15 @@ class Irradiation(Process): #irradiation
         fig.suptitle('Dose (arb. units)', fontsize=20)
         plt.tight_layout()
         plt.savefig('dose.png', dpi=300)
+
+        plt.close()
+        '''
+        Commented by Jesús on 24/07/01 to avoid generating multiple plots
         if self.config.running_on_cluster:
             plt.close()
         else:
             plt.show()
+        '''
     @Process.timeit
     def __call__(self, world: World):
         for voxel in world.voxel_list:
